@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>7404 Hex Inverter — AR Explorer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Orbitron:wght@400;600;700;900&display=swap');
+
+  :root {
+    --bg-dark: #0a0e1a;
+    --bg-chip: #1a1f2e;
+    --neon-green: #00ff88;
+    --neon-blue: #00aaff;
+    --neon-red: #ff3366;
+    --neon-yellow: #ffcc00;
+    --neon-purple: #aa44ff;
+    --pin-gold: #d4a843;
+    --text-dim: #5a6a8a;
+    --text-light: #c0d0e8;
+    --glow-green: 0 0 15px rgba(0,255,136,0.5);
+    --glow-blue: 0 0 15px rgba(0,170,255,0.5);
+    --glow-red: 0 0 12px rgba(255,51,102,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-dark);
+    color: var(--text-light);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,255,136,0.015) 2px,
+      rgba(0,255,136,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  .ar-badge {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.3);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    color: var(--neon-green);
+    letter-spacing: 2px;
+    z-index: 100;
+    animation: pulse-badge 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+  }
+
+  .header {
+    text-align: center;
+    padding: 50px 16px 20px;
+  }
+
+  .header h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(20px, 5vw, 32px);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--neon-green), var(--neon-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 3px;
+  }
+
+  .header .subtitle {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+
+  /* === CHIP CONTAINER === */
+  .chip-stage {
+    position: relative;
+    width: min(95vw, 420px);
+    margin: 10px auto 20px;
+    aspect-ratio: 1.6;
+  }
+
+  .chip-body {
+    position: absolute;
+    inset: 15% 8%;
+    background: var(--bg-chip);
+    border: 2px solid rgba(0,170,255,0.2);
+    border-radius: 8px;
+    box-shadow: 
+      inset 0 0 40px rgba(0,0,0,0.5),
+      0 0 30px rgba(0,170,255,0.1);
+  }
+
+  .chip-notch {
+    position: absolute;
+    left: -2px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 28px;
+    background: var(--bg-dark);
+    border: 2px solid rgba(0,170,255,0.2);
+    border-left: none;
+    border-radius: 0 14px 14px 0;
+  }
+
+  .chip-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(10px, 3vw, 15px);
+    color: rgba(200,210,230,0.4);
+    letter-spacing: 2px;
+    white-space: nowrap;
+  }
+
+  /* === PINS === */
+  .pin {
+    position: absolute;
+    width: 28px;
+    height: 22px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .pin-visual {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #c9a33a, #a07820);
+    border-radius: 2px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.3s;
+  }
+
+  .pin:hover .pin-visual,
+  .pin.active .pin-visual {
+    background: linear-gradient(180deg, #e8c84a, #c09830);
+    box-shadow: 0 0 12px rgba(212,168,67,0.6);
+  }
+
+  .pin-number {
+    position: absolute;
+    font-size: 8px;
+    font-weight: 700;
+    color: var(--text-dim);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .pin-name {
+    position: absolute;
+    font-size: 7px;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .pin-name.input { color: var(--neon-blue); }
+  .pin-name.output { color: var(--neon-green); }
+  .pin-name.power { color: var(--neon-red); }
+  .pin-name.ground { color: var(--neon-yellow); }
+
+  /* Bottom pins (1-7) */
+  .pin.bottom { transform-origin: center top; }
+  .pin.bottom .pin-number { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 2px; }
+  .pin.bottom .pin-name { top: calc(100% + 11px); left: 50%; transform: translateX(-50%); }
+
+  /* Top pins (8-14) */
+  .pin.top { transform-origin: center bottom; }
+  .pin.top .pin-number { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 2px; }
+  .pin.top .pin-name { bottom: calc(100% + 11px); left: 50%; transform: translateX(-50%); }
+
+  /* === GATE SVG INSIDE CHIP === */
+  .gates-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .gate-group {
+    cursor: pointer;
+    pointer-events: all;
+    transition: opacity 0.3s;
+  }
+
+  .gate-group:hover .gate-body-shape,
+  .gate-group.selected .gate-body-shape {
+    filter: drop-shadow(0 0 8px rgba(0,255,136,0.5));
+  }
+
+  /* === BIT FLOW ANIMATION === */
+  .bit-particle {
+    fill: var(--neon-green);
+    filter: drop-shadow(0 0 4px rgba(0,255,136,0.8));
+  }
+
+  .bit-particle.zero {
+    fill: var(--neon-red);
+    filter: drop-shadow(0 0 4px rgba(255,51,102,0.8));
+  }
+
+  @keyframes flowParticle {
+    0% { offset-distance: 0%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { offset-distance: 100%; opacity: 0; }
+  }
+
+  /* === DETAIL PANEL === */
+  .detail-panel {
+    position: relative;
+    width: min(95vw, 420px);
+    margin: 0 auto 20px;
+    background: rgba(20,25,40,0.9);
+    border: 1px solid rgba(0,170,255,0.15);
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 200px;
+    backdrop-filter: blur(10px);
+  }
+
+  .panel-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    color: var(--neon-green);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .truth-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 13px;
+  }
+
+  .truth-table th {
+    background: rgba(0,170,255,0.1);
+    color: var(--neon-blue);
+    padding: 8px 12px;
+    text-align: center;
+    font-weight: 600;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(0,170,255,0.2);
+  }
+
+  .truth-table td {
+    padding: 8px 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .truth-table tr.active-row {
+    background: rgba(0,255,136,0.08);
+  }
+
+  .bit-val {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .bit-val.one {
+    background: rgba(0,255,136,0.15);
+    color: var(--neon-green);
+    box-shadow: inset 0 0 8px rgba(0,255,136,0.2);
+  }
+
+  .bit-val.zero {
+    background: rgba(255,51,102,0.1);
+    color: var(--neon-red);
+    box-shadow: inset 0 0 8px rgba(255,51,102,0.15);
+  }
+
+  /* === INTERACTIVE CONTROLS === */
+  .controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 10px 0;
+  }
+
+  .ctrl-btn {
+    background: rgba(0,170,255,0.1);
+    border: 1px solid rgba(0,170,255,0.3);
+    color: var(--neon-blue);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .ctrl-btn:hover, .ctrl-btn.active {
+    background: rgba(0,170,255,0.25);
+    box-shadow: var(--glow-blue);
+  }
+
+  .ctrl-btn.run {
+    background: rgba(0,255,136,0.1);
+    border-color: rgba(0,255,136,0.3);
+    color: var(--neon-green);
+  }
+
+  .ctrl-btn.run:hover {
+    background: rgba(0,255,136,0.25);
+    box-shadow: var(--glow-green);
+  }
+
+  /* === PIN BIT DISPLAY === */
+  .pin-bit-display {
+    position: absolute;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 4px;
+    pointer-events: none;
+    transition: all 0.3s;
+    opacity: 0;
+  }
+
+  .pin-bit-display.visible {
+    opacity: 1;
+  }
+
+  .pin-bit-display.val-1 {
+    background: rgba(0,255,136,0.2);
+    color: var(--neon-green);
+    box-shadow: 0 0 8px rgba(0,255,136,0.3);
+  }
+
+  .pin-bit-display.val-0 {
+    background: rgba(255,51,102,0.2);
+    color: var(--neon-red);
+    box-shadow: 0 0 8px rgba(255,51,102,0.3);
+  }
+
+  /* === GATE INFO POPUP === */
+  .gate-info {
+    display: none;
+    position: absolute;
+    background: rgba(10,14,26,0.95);
+    border: 1px solid rgba(0,255,136,0.3);
+    border-radius: 10px;
+    padding: 12px;
+    width: 160px;
+    z-index: 50;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 0 20px rgba(0,255,136,0.15);
+  }
+
+  .gate-info.visible { display: block; }
+
+  .gate-info .gi-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    color: var(--neon-green);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+
+  .gate-info .gi-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .gate-info .gi-label { color: var(--text-dim); }
+  .gate-info .gi-val { color: var(--text-light); font-weight: 600; }
+
+  /* === FLOW LINES SVG === */
+  .flow-line {
+    stroke: rgba(0,255,136,0.15);
+    stroke-width: 1.5;
+    fill: none;
+    stroke-dasharray: 4 4;
+    animation: dash-flow 1s linear infinite;
+  }
+
+  .flow-line.active {
+    stroke: rgba(0,255,136,0.5);
+    stroke-width: 2;
+  }
+
+  @keyframes dash-flow {
+    to { stroke-dashoffset: -8; }
+  }
+
+  /* === EXPLANATION SECTION === */
+  .explanation {
+    width: min(95vw, 420px);
+    margin: 0 auto 30px;
+    padding: 16px;
+    background: rgba(15,20,35,0.6);
+    border: 1px solid rgba(0,170,255,0.1);
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-dim);
+  }
+
+  .explanation strong {
+    color: var(--neon-blue);
+    font-weight: 600;
+  }
+
+  .explanation .highlight {
+    color: var(--neon-green);
+  }
+
+  /* Animated bit stream */
+  .bit-stream {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin: 8px 0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+  }
+
+  .stream-bit {
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+    border-radius: 4px;
+    animation: stream-pulse 1.5s ease-in-out infinite;
+  }
+
+  .stream-bit:nth-child(odd) { animation-delay: 0s; }
+  .stream-bit:nth-child(even) { animation-delay: 0.75s; }
+
+  @keyframes stream-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.15); opacity: 1; }
+  }
+
+  /* Touch hint */
+  .touch-hint {
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin: 8px 0;
+    animation: fade-hint 3s ease-in-out infinite;
+  }
+
+  @keyframes fade-hint {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+
+  /* Particle canvas for background */
+  #bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: -1;
+  }
+</style>
+</head>
+<body>
+
+<div class="ar-badge">◉ AR EXPLORER</div>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="header">
+  <h1>7404 HEX INVERTER</h1>
+  <div class="subtitle">CIRCUITO INTEGRADO — 6 COMPUERTAS NOT</div>
+</div>
+
+<div class="touch-hint">⟡ Toca una compuerta o pin para explorar ⟡</div>
+
+<div class="chip-stage" id="chipStage">
+  <!-- Chip body -->
+  <div class="chip-body">
+    <div class="chip-notch"></div>
+    <div class="chip-label">SN7404N</div>
+  </div>
+
+  <!-- SVG overlay for gates and flow lines -->
+  <svg class="gates-layer" id="gatesSVG" viewBox="0 0 420 260" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <marker id="arrowG" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="rgba(0,255,136,0.6)"/>
+      </marker>
+      <marker id="arrowR" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="rgba(255,51,102,0.5)"/>
+      </marker>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="2" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+
+    <!-- Gate symbols will be drawn by JS -->
+    <g id="gatesContainer"></g>
+    <!-- Flow particles -->
+    <g id="particlesContainer"></g>
+  </svg>
+
+  <!-- Pin bit displays (floating numbers on pins) -->
+  <div id="pinBitDisplays"></div>
+</div>
+
+<!-- Controls -->
+<div class="controls" id="controls">
+  <button class="ctrl-btn run" onclick="runSequence()">▶ SECUENCIA</button>
+  <button class="ctrl-btn" onclick="toggleAllInputs()">⟲ TOGGLE INPUTS</button>
+  <button class="ctrl-btn" onclick="resetAll()">↺ RESET</button>
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-panel" id="detailPanel">
+  <div class="panel-title" id="panelTitle">COMPUERTA NOT — INVERSORA</div>
+  <div id="panelContent">
+    <p style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">
+      El 7404 contiene <strong style="color:var(--neon-green)">6 compuertas NOT</strong> independientes.
+      Cada compuerta invierte la señal: si la entrada es <span class="bit-val one">1</span>, la salida es <span class="bit-val zero">0</span> y viceversa.
+    </p>
+    <table class="truth-table">
+      <thead><tr><th>ENTRADA (A)</th><th>→</th><th>SALIDA (Y)</th></tr></thead>
+      <tbody>
+        <tr id="ttRow0"><td><span class="bit-val zero">0</span></td><td style="color:var(--text-dim)">NOT</td><td><span class="bit-val one">1</span></td></tr>
+        <tr id="ttRow1"><td><span class="bit-val one">1</span></td><td style="color:var(--text-dim)">NOT</td><td><span class="bit-val zero">0</span></td></tr>
+      </tbody>
+    </table>
+    <div class="bit-stream" id="bitStream">
+      <span class="stream-bit bit-val one">1</span>
+      <span style="color:var(--text-dim);line-height:24px">→</span>
+      <span style="color:var(--text-dim);font-size:9px;line-height:24px">NOT</span>
+      <span style="color:var(--text-dim);line-height:24px">→</span>
+      <span class="stream-bit bit-val zero">0</span>
+    </div>
+  </div>
+</div>
+
+<!-- Explanation -->
+<div class="explanation">
+  <strong>¿Cómo funciona?</strong><br>
+  Cada compuerta NOT tiene <span class="highlight">1 entrada</span> y <span class="highlight">1 salida</span>.
+  Internamente, un transistor actúa como interruptor: cuando la entrada es HIGH (1), el transistor conduce y conecta la salida a GND (0). Cuando la entrada es LOW (0), el transistor se corta y la salida sube a Vcc (1).<br><br>
+  <strong>Pinout:</strong> Pin 14 = Vcc (+5V), Pin 7 = GND. Las 6 compuertas son independientes entre sí.<br><br>
+  <strong>Interacción:</strong> Toca cada compuerta para ver el flujo de bits. Usa <span class="highlight">▶ SECUENCIA</span> para ver una animación automática.
+</div>
+
+<script>
+// ============ DATA ============
+const gates = [
+  { id: 1, inPin: 1, outPin: 2, inName: '1A', outName: '1Y', inputVal: 0 },
+  { id: 2, inPin: 3, outPin: 4, inName: '2A', outName: '2Y', inputVal: 0 },
+  { id: 3, inPin: 5, outPin: 6, inName: '3A', outName: '3Y', inputVal: 0 },
+  { id: 4, inPin: 13, outPin: 12, inName: '6A', outName: '6Y', inputVal: 0 },
+  { id: 5, inPin: 11, outPin: 10, inName: '5A', outName: '5Y', inputVal: 0 },
+  { id: 6, inPin: 9, outPin: 8, inName: '4A', outName: '4Y', inputVal: 0 },
+];
+
+// Pin positions in SVG viewBox (420x260)
+const pinPositions = {
+  1:  { x: 60,  y: 245, side: 'bottom' },
+  2:  { x: 110, y: 245, side: 'bottom' },
+  3:  { x: 160, y: 245, side: 'bottom' },
+  4:  { x: 210, y: 245, side: 'bottom' },
+  5:  { x: 260, y: 245, side: 'bottom' },
+  6:  { x: 310, y: 245, side: 'bottom' },
+  7:  { x: 360, y: 245, side: 'bottom' },
+  8:  { x: 360, y: 15,  side: 'top' },
+  9:  { x: 310, y: 15,  side: 'top' },
+  10: { x: 260, y: 15,  side: 'top' },
+  11: { x: 210, y: 15,  side: 'top' },
+  12: { x: 160, y: 15,  side: 'top' },
+  13: { x: 110, y: 15,  side: 'top' },
+  14: { x: 60,  y: 15,  side: 'top' },
+};
+
+const pinMeta = {
+  1:  { name: '1A', type: 'input' },
+  2:  { name: '1Y', type: 'output' },
+  3:  { name: '2A', type: 'input' },
+  4:  { name: '2Y', type: 'output' },
+  5:  { name: '3A', type: 'input' },
+  6:  { name: '3Y', type: 'output' },
+  7:  { name: 'GND', type: 'ground' },
+  8:  { name: '4Y', type: 'output' },
+  9:  { name: '4A', type: 'input' },
+  10: { name: '5Y', type: 'output' },
+  11: { name: '5A', type: 'input' },
+  12: { name: '6Y', type: 'output' },
+  13: { name: '6A', type: 'input' },
+  14: { name: 'Vcc', type: 'power' },
+};
+
+let selectedGate = null;
+let animationTimer = null;
+let particles = [];
+
+// ============ BUILD CHIP PINS (HTML) ============
+function buildPins() {
+  const stage = document.getElementById('chipStage');
+  const stageW = 420, stageH = 260;
+
+  for (let p = 1; p <= 14; p++) {
+    const pos = pinPositions[p];
+    const meta = pinMeta[p];
+    const pin = document.createElement('div');
+    pin.className = `pin ${pos.side}`;
+    pin.dataset.pin = p;
+
+    const leftPct = (pos.x / stageW * 100);
+    const pinWidthPct = (28 / stageW * 100);
+
+    if (pos.side === 'bottom') {
+      pin.style.left = `${leftPct - pinWidthPct/2}%`;
+      pin.style.bottom = '0%';
+    } else {
+      pin.style.left = `${leftPct - pinWidthPct/2}%`;
+      pin.style.top = '0%';
+    }
+
+    pin.innerHTML = `
+      <div class="pin-visual"></div>
+      <span class="pin-number">${p}</span>
+      <span class="pin-name ${meta.type}">${meta.name}</span>
+    `;
+
+    pin.addEventListener('click', () => handlePinClick(p));
+    stage.appendChild(pin);
+  }
+}
+
+// ============ BUILD GATE SYMBOLS (SVG) ============
+function buildGates() {
+  const container = document.getElementById('gatesContainer');
+  const svgNS = 'http://www.w3.org/2000/svg';
+
+  gates.forEach((gate, idx) => {
+    const inPos = pinPositions[gate.inPin];
+    const outPos = pinPositions[gate.outPin];
+
+    // Gate center
+    const cx = (inPos.x + outPos.x) / 2;
+    const cy = 130;
+
+    const g = document.createElementNS(svgNS, 'g');
+    g.classList.add('gate-group');
+    g.dataset.gateId = gate.id;
+    g.addEventListener('click', () => selectGate(gate.id));
+
+    // NOT gate symbol (triangle + bubble)
+    const gateSize = 18;
+
+    // Triangle body
+    const tri = document.createElementNS(svgNS, 'path');
+    const triPath = `M${cx - gateSize},${cy - gateSize * 0.8} L${cx + gateSize * 0.7},${cy} L${cx - gateSize},${cy + gateSize * 0.8} Z`;
+    tri.setAttribute('d', triPath);
+    tri.setAttribute('fill', 'rgba(0,170,255,0.08)');
+    tri.setAttribute('stroke', 'rgba(0,170,255,0.5)');
+    tri.setAttribute('stroke-width', '1.5');
+    tri.classList.add('gate-body-shape');
+    g.appendChild(tri);
+
+    // Inversion bubble
+    const bubble = document.createElementNS(svgNS, 'circle');
+    bubble.setAttribute('cx', cx + gateSize * 0.7 + 5);
+    bubble.setAttribute('cy', cy);
+    bubble.setAttribute('r', '4');
+    bubble.setAttribute('fill', 'none');
+    bubble.setAttribute('stroke', 'rgba(0,170,255,0.5)');
+    bubble.setAttribute('stroke-width', '1.5');
+    bubble.classList.add('gate-body-shape');
+    g.appendChild(bubble);
+
+    // Gate label
+    const label = document.createElementNS(svgNS, 'text');
+    label.setAttribute('x', cx - 5);
+    label.setAttribute('y', cy + 3);
+    label.setAttribute('fill', 'rgba(200,215,240,0.4)');
+    label.setAttribute('font-size', '8');
+    label.setAttribute('font-family', 'Orbitron, sans-serif');
+    label.setAttribute('text-anchor', 'middle');
+    label.textContent = `G${gate.id}`;
+    g.appendChild(label);
+
+    // Flow lines from input pin to gate
+    const inLine = document.createElementNS(svgNS, 'line');
+    inLine.setAttribute('x1', inPos.x);
+    inLine.setAttribute('y1', inPos.side === 'bottom' ? 230 : 30);
+    inLine.setAttribute('x2', cx - gateSize);
+    inLine.setAttribute('y2', cy);
+    inLine.classList.add('flow-line');
+    inLine.dataset.gateFlow = gate.id;
+    inLine.dataset.flowType = 'in';
+    g.appendChild(inLine);
+
+    // Flow line from gate to output pin
+    const outLine = document.createElementNS(svgNS, 'line');
+    outLine.setAttribute('x1', cx + gateSize * 0.7 + 9);
+    outLine.setAttribute('y1', cy);
+    outLine.setAttribute('x2', outPos.x);
+    outLine.setAttribute('y2', outPos.side === 'bottom' ? 230 : 30);
+    outLine.classList.add('flow-line');
+    outLine.dataset.gateFlow = gate.id;
+    outLine.dataset.flowType = 'out';
+    g.appendChild(outLine);
+
+    container.appendChild(g);
+  });
+}
+
+// ============ SELECT GATE ============
+function selectGate(gateId) {
+  selectedGate = gateId;
+  const gate = gates.find(g => g.id === gateId);
+
+  // Highlight
+  document.querySelectorAll('.gate-group').forEach(g => g.classList.remove('selected'));
+  document.querySelector(`.gate-group[data-gate-id="${gateId}"]`).classList.add('selected');
+
+  // Update flow lines
+  document.querySelectorAll('.flow-line').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll(`.flow-line[data-gate-flow="${gateId}"]`).forEach(l => l.classList.add('active'));
+
+  // Update panel
+  const output = gate.inputVal === 0 ? 1 : 0;
+  document.getElementById('panelTitle').textContent = `COMPUERTA G${gateId} — ${gate.inName} → ${gate.outName}`;
+  document.getElementById('panelContent').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:15px 0;">
+      <div style="text-align:center">
+        <div style="font-size:9px;color:var(--neon-blue);margin-bottom:4px">PIN ${gate.inPin} (${gate.inName})</div>
+        <span class="bit-val ${gate.inputVal ? 'one' : 'zero'}" style="font-size:22px;width:40px;height:40px;line-height:40px">${gate.inputVal}</span>
+      </div>
+      <div style="font-size:20px;color:var(--text-dim)">→</div>
+      <div style="text-align:center;padding:8px 14px;border:1px solid rgba(0,170,255,0.2);border-radius:8px;background:rgba(0,170,255,0.05)">
+        <div style="font-size:9px;color:var(--neon-purple);margin-bottom:2px">NOT</div>
+        <div style="font-size:7px;color:var(--text-dim)">INVIERTE</div>
+      </div>
+      <div style="font-size:20px;color:var(--text-dim)">→</div>
+      <div style="text-align:center">
+        <div style="font-size:9px;color:var(--neon-green);margin-bottom:4px">PIN ${gate.outPin} (${gate.outName})</div>
+        <span class="bit-val ${output ? 'one' : 'zero'}" style="font-size:22px;width:40px;height:40px;line-height:40px">${output}</span>
+      </div>
+    </div>
+    <table class="truth-table">
+      <thead><tr><th>${gate.inName}</th><th>→</th><th>${gate.outName}</th></tr></thead>
+      <tbody>
+        <tr class="${gate.inputVal === 0 ? 'active-row' : ''}"><td><span class="bit-val zero">0</span></td><td style="color:var(--text-dim)">NOT</td><td><span class="bit-val one">1</span></td></tr>
+        <tr class="${gate.inputVal === 1 ? 'active-row' : ''}"><td><span class="bit-val one">1</span></td><td style="color:var(--text-dim)">NOT</td><td><span class="bit-val zero">0</span></td></tr>
+      </tbody>
+    </table>
+    <div style="text-align:center;margin-top:10px">
+      <button class="ctrl-btn" onclick="toggleGateInput(${gateId})" style="font-size:12px;padding:10px 20px">
+        ⟲ CAMBIAR ENTRADA DE G${gateId}
+      </button>
+    </div>
+  `;
+
+  // Animate particles
+  animateGateBits(gateId);
+  updatePinDisplays();
+}
+
+// ============ TOGGLE GATE INPUT ============
+function toggleGateInput(gateId) {
+  const gate = gates.find(g => g.id === gateId);
+  gate.inputVal = gate.inputVal === 0 ? 1 : 0;
+  selectGate(gateId);
+}
+
+// ============ HANDLE PIN CLICK ============
+function handlePinClick(pinNum) {
+  // Find which gate this pin belongs to
+  const gate = gates.find(g => g.inPin === pinNum || g.outPin === pinNum);
+  if (gate) {
+    selectGate(gate.id);
+  } else if (pinNum === 7 || pinNum === 14) {
+    document.getElementById('panelTitle').textContent = pinNum === 14 ? 'PIN 14 — Vcc (+5V)' : 'PIN 7 — GND (0V)';
+    document.getElementById('panelContent').innerHTML = `
+      <div style="text-align:center;padding:20px">
+        <div style="font-size:40px;margin-bottom:10px">${pinNum === 14 ? '⚡' : '⏚'}</div>
+        <p style="font-size:12px;color:var(--text-dim)">
+          ${pinNum === 14 
+            ? '<strong style="color:var(--neon-red)">Vcc</strong> — Alimentación positiva. Conectar a +5V DC. Este pin suministra energía a las 6 compuertas internas.'
+            : '<strong style="color:var(--neon-yellow)">GND</strong> — Tierra. Referencia de 0V del circuito. Indispensable para cerrar el circuito eléctrico.'}
+        </p>
+      </div>
+    `;
+  }
+}
+
+// ============ ANIMATE BIT PARTICLES ============
+function animateGateBits(gateId) {
+  const container = document.getElementById('particlesContainer');
+  // Clear old particles
+  container.innerHTML = '';
+
+  const gate = gates.find(g => g.id === gateId);
+  const inPos = pinPositions[gate.inPin];
+  const outPos = pinPositions[gate.outPin];
+  const cx = (inPos.x + outPos.x) / 2;
+  const cy = 130;
+  const gateSize = 18;
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const output = gate.inputVal === 0 ? 1 : 0;
+
+  // Input particles
+  for (let i = 0; i < 4; i++) {
+    setTimeout(() => {
+      const circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('r', '4');
+      circle.classList.add('bit-particle');
+      if (gate.inputVal === 0) circle.classList.add('zero');
+
+      // Animate along input line
+      const startX = inPos.x;
+      const startY = inPos.side === 'bottom' ? 230 : 30;
+      const endX = cx - gateSize;
+      const endY = cy;
+
+      animateParticle(circle, startX, startY, endX, endY, 800);
+      container.appendChild(circle);
+    }, i * 400);
+  }
+
+  // Output particles (delayed)
+  for (let i = 0; i < 4; i++) {
+    setTimeout(() => {
+      const circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('r', '4');
+      circle.classList.add('bit-particle');
+      if (output === 0) circle.classList.add('zero');
+
+      const startX = cx + gateSize * 0.7 + 9;
+      const startY = cy;
+      const endX = outPos.x;
+      const endY = outPos.side === 'bottom' ? 230 : 30;
+
+      animateParticle(circle, startX, startY, endX, endY, 800);
+      container.appendChild(circle);
+    }, i * 400 + 500);
+  }
+
+  // Text labels on particles
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      // Input text
+      const tIn = document.createElementNS(svgNS, 'text');
+      tIn.setAttribute('font-size', '9');
+      tIn.setAttribute('font-family', 'Orbitron, sans-serif');
+      tIn.setAttribute('font-weight', '700');
+      tIn.setAttribute('fill', gate.inputVal ? '#00ff88' : '#ff3366');
+      tIn.setAttribute('text-anchor', 'middle');
+      tIn.textContent = String(gate.inputVal);
+
+      const startX = inPos.x;
+      const startY = inPos.side === 'bottom' ? 228 : 32;
+      const endX = cx - gateSize;
+      const endY = cy + 3;
+
+      animateParticle(tIn, startX, startY, endX, endY, 900);
+      container.appendChild(tIn);
+
+      // Output text
+      setTimeout(() => {
+        const tOut = document.createElementNS(svgNS, 'text');
+        tOut.setAttribute('font-size', '9');
+        tOut.setAttribute('font-family', 'Orbitron, sans-serif');
+        tOut.setAttribute('font-weight', '700');
+        tOut.setAttribute('fill', output ? '#00ff88' : '#ff3366');
+        tOut.setAttribute('text-anchor', 'middle');
+        tOut.textContent = String(output);
+
+        const sX = cx + gateSize * 0.7 + 9;
+        const sY = cy + 3;
+        const eX = outPos.x;
+        const eY = outPos.side === 'bottom' ? 228 : 32;
+
+        animateParticle(tOut, sX, sY, eX, eY, 900);
+        container.appendChild(tOut);
+      }, 400);
+    }, i * 600 + 200);
+  }
+}
+
+function animateParticle(el, x1, y1, x2, y2, duration) {
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+    const x = x1 + (x2 - x1) * ease;
+    const y = y1 + (y2 - y1) * ease;
+
+    if (el.tagName === 'circle') {
+      el.setAttribute('cx', x);
+      el.setAttribute('cy', y);
+    } else {
+      el.setAttribute('x', x);
+      el.setAttribute('y', y);
+    }
+
+    const opacity = t < 0.1 ? t * 10 : t > 0.85 ? (1 - t) / 0.15 : 1;
+    el.setAttribute('opacity', opacity);
+
+    if (t < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.remove();
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+// ============ PIN BIT DISPLAYS ============
+function updatePinDisplays() {
+  const container = document.getElementById('pinBitDisplays');
+  container.innerHTML = '';
+  const stage = document.getElementById('chipStage');
+  const stageRect = stage.getBoundingClientRect();
+  const stageW = stageRect.width;
+  const stageH = stageRect.height;
+
+  gates.forEach(gate => {
+    const output = gate.inputVal === 0 ? 1 : 0;
+
+    // Input pin display
+    createPinBitEl(container, gate.inPin, gate.inputVal, stageW, stageH);
+    // Output pin display
+    createPinBitEl(container, gate.outPin, output, stageW, stageH);
+  });
+}
+
+function createPinBitEl(container, pinNum, val, stageW, stageH) {
+  const pos = pinPositions[pinNum];
+  const el = document.createElement('div');
+  el.className = `pin-bit-display visible val-${val}`;
+  el.textContent = val;
+
+  const leftPct = pos.x / 420 * 100;
+  if (pos.side === 'bottom') {
+    el.style.left = `calc(${leftPct}% - 9px)`;
+    el.style.bottom = '28%';
+  } else {
+    el.style.left = `calc(${leftPct}% - 9px)`;
+    el.style.top = '28%';
+  }
+
+  container.appendChild(el);
+}
+
+// ============ CONTROLS ============
+function toggleAllInputs() {
+  gates.forEach(g => g.inputVal = g.inputVal === 0 ? 1 : 0);
+  if (selectedGate) selectGate(selectedGate);
+  updatePinDisplays();
+}
+
+function resetAll() {
+  gates.forEach(g => g.inputVal = 0);
+  selectedGate = null;
+  document.querySelectorAll('.gate-group').forEach(g => g.classList.remove('selected'));
+  document.querySelectorAll('.flow-line').forEach(l => l.classList.remove('active'));
+  document.getElementById('particlesContainer').innerHTML = '';
+  document.getElementById('pinBitDisplays').innerHTML = '';
+
+  document.getElementById('panelTitle').textContent = 'COMPUERTA NOT — INVERSORA';
+  document.getElementById('panelContent').innerHTML = `
+    <p style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">
+      El 7404 contiene <strong style="color:var(--neon-green)">6 compuertas NOT</strong> independientes.
+      Cada compuerta invierte la señal: si la entrada es <span class="bit-val one">1</span>, la salida es <span class="bit-val zero">0</span> y viceversa.
+    </p>
+    <table class="truth-table">
+      <thead><tr><th>ENTRADA (A)</th><th>→</th><th>SALIDA (Y)</th></tr></thead>
+      <tbody>
+        <tr><td><span class="bit-val zero">0</span></td><td style="color:var(--text-dim)">NOT</td><td><span class="bit-val one">1</span></td></tr>
+        <tr><td><span class="bit-val one">1</span></td><td style="color:var(--text-dim)">NOT</td><td><span class="bit-val zero">0</span></td></tr>
+      </tbody>
+    </table>
+    <div class="bit-stream">
+      <span class="stream-bit bit-val one">1</span>
+      <span style="color:var(--text-dim);line-height:24px">→</span>
+      <span style="color:var(--text-dim);font-size:9px;line-height:24px">NOT</span>
+      <span style="color:var(--text-dim);line-height:24px">→</span>
+      <span class="stream-bit bit-val zero">0</span>
+    </div>
+  `;
+  if (animationTimer) clearInterval(animationTimer);
+}
+
+function runSequence() {
+  let step = 0;
+  if (animationTimer) clearInterval(animationTimer);
+
+  animationTimer = setInterval(() => {
+    const gateIdx = step % 6;
+    const gate = gates[gateIdx];
+
+    // Toggle input every full cycle
+    if (step >= 6) {
+      gate.inputVal = gate.inputVal === 0 ? 1 : 0;
+    }
+
+    selectGate(gate.id);
+    step++;
+
+    if (step >= 12) {
+      clearInterval(animationTimer);
+      animationTimer = null;
+    }
+  }, 1200);
+}
+
+// ============ BACKGROUND PARTICLES ============
+function initBackground() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let w, h;
+  const dots = [];
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < 40; i++) {
+    dots.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.5 + 0.5,
+      a: Math.random() * 0.3 + 0.05
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    dots.forEach(d => {
+      d.x += d.vx;
+      d.y += d.vy;
+      if (d.x < 0) d.x = w;
+      if (d.x > w) d.x = 0;
+      if (d.y < 0) d.y = h;
+      if (d.y > h) d.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0,170,255,${d.a})`;
+      ctx.fill();
+    });
+
+    // Connect nearby dots
+    for (let i = 0; i < dots.length; i++) {
+      for (let j = i + 1; j < dots.length; j++) {
+        const dx = dots[i].x - dots[j].x;
+        const dy = dots[i].y - dots[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 120) {
+          ctx.beginPath();
+          ctx.moveTo(dots[i].x, dots[i].y);
+          ctx.lineTo(dots[j].x, dots[j].y);
+          ctx.strokeStyle = `rgba(0,170,255,${0.05 * (1 - dist/120)})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ============ INIT ============
+buildPins();
+buildGates();
+initBackground();
+
+// Auto-select gate 1 on load
+setTimeout(() => selectGate(1), 500);
+</script>
+
+</body>
+</html>
