@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Sistemas de Numeración — Semana 1</title>
+<style>
+  :root{
+    --bg:#0A0E1A;
+    --panel:#10162B;
+    --panel2:#121A33;
+    --grid:#1B2340;
+    --cyan:#00E5FF;
+    --magenta:#C13CFF;
+    --white:#F2F6FF;
+    --muted:#8892B0;
+    --ok:#4ADE80;
+    --err:#FF6B6B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      linear-gradient(var(--bg),var(--bg)),
+      repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 90px);
+    background-blend-mode:normal;
+    color:var(--white);
+    font-family:Arial,'Segoe UI',sans-serif;
+    min-height:100vh;
+    padding:28px 18px 60px;
+  }
+  .wrap{max-width:980px;margin:0 auto;}
+  .kicker{
+    font-family:Arial,sans-serif;
+    letter-spacing:3px;
+    color:var(--cyan);
+    font-size:13px;
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  h1{
+    font-family:Arial,sans-serif;
+    font-size:clamp(24px,4vw,34px);
+    margin:0 0 6px;
+    color:var(--white);
+  }
+  .sub{color:var(--muted);font-size:15px;margin-bottom:28px;}
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--grid);
+    border-radius:10px;
+    padding:22px 24px;
+    margin-bottom:22px;
+  }
+  .panel h2{
+    font-family:Arial,sans-serif;
+    font-size:13px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--cyan);
+    margin:0 0 16px;
+    border:none;
+  }
+  .panel.magenta h2{color:var(--magenta);}
+  .input-row{
+    display:flex;
+    gap:14px;
+    align-items:center;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+  label{font-size:13px;color:var(--muted);}
+  input[type="number"], input[type="text"]{
+    background:#0D1226;
+    border:1px solid var(--grid);
+    color:var(--white);
+    font-family:Arial,sans-serif;
+    font-size:18px;
+    padding:10px 14px;
+    border-radius:6px;
+    width:180px;
+    outline:none;
+  }
+  input[type="number"]:focus, input[type="text"]:focus{border-color:var(--cyan);}
+  .base-select{display:flex;gap:8px;flex-wrap:wrap;}
+  .base-btn{
+    background:transparent;
+    border:1px solid var(--grid);
+    color:var(--muted);
+    font-family:Arial,sans-serif;
+    font-size:12px;
+    padding:8px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    transition:all .15s;
+  }
+  .base-btn.active{border-color:var(--cyan);color:var(--white);background:rgba(0,229,255,.08);}
+  .results{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:14px;
+    margin-top:18px;
+  }
+  .result-card{
+    background:var(--panel2);
+    border:1px solid var(--grid);
+    border-radius:8px;
+    padding:14px 16px;
+  }
+  .result-card .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+  .result-card .val{font-family:Arial,sans-serif;font-size:20px;font-weight:bold;color:var(--cyan);word-break:break-all;}
+  .result-card.mag .val{color:var(--magenta);}
+  .steps{
+    margin-top:18px;
+    font-family:Arial,sans-serif;
+    font-size:13px;
+    color:var(--muted);
+    line-height:1.9;
+    background:#0D1226;
+    border-radius:8px;
+    padding:14px 18px;
+    max-height:260px;
+    overflow-y:auto;
+  }
+  .steps b{color:var(--white);}
+  .steps .r{color:var(--cyan);font-weight:bold;}
+  .toggle-btn{
+    background:transparent;
+    border:1px solid var(--grid);
+    color:var(--muted);
+    font-size:12px;
+    padding:6px 12px;
+    border-radius:6px;
+    cursor:pointer;
+    margin-top:14px;
+  }
+  .toggle-btn:hover{border-color:var(--cyan);color:var(--white);}
+  /* practice mode */
+  .challenge{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  .challenge .val-big{
+    font-family:Arial,sans-serif;
+    font-size:26px;
+    font-weight:bold;
+    color:var(--white);
+    background:#0D1226;
+    padding:10px 18px;
+    border-radius:8px;
+    border:1px solid var(--grid);
+  }
+  .challenge .arrow{color:var(--muted);font-size:20px;}
+  .challenge .target{color:var(--magenta);font-family:Arial,sans-serif;font-weight:bold;}
+  .answer-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  button.primary{
+    background:transparent;
+    border:1px solid var(--cyan);
+    color:var(--cyan);
+    font-family:Arial,sans-serif;
+    font-weight:bold;
+    font-size:13px;
+    padding:10px 20px;
+    border-radius:6px;
+    cursor:pointer;
+    transition:all .15s;
+  }
+  button.primary:hover{background:rgba(0,229,255,.1);}
+  button.secondary{
+    background:transparent;
+    border:1px solid var(--grid);
+    color:var(--muted);
+    font-size:13px;
+    padding:10px 18px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  button.secondary:hover{border-color:var(--magenta);color:var(--white);}
+  .feedback{margin-top:12px;font-size:14px;font-weight:bold;min-height:22px;}
+  .feedback.ok{color:var(--ok);}
+  .feedback.err{color:var(--err);}
+  .score{font-family:Arial,sans-serif;font-size:12px;color:var(--muted);margin-top:10px;}
+  .case-box{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+  .case-text{flex:1;min-width:260px;font-size:14px;line-height:1.7;color:var(--white);}
+  .case-actions{display:flex;flex-direction:column;gap:10px;min-width:180px;}
+  .footer-note{
+    text-align:center;
+    color:var(--muted);
+    font-size:11.5px;
+    margin-top:30px;
+    font-family:Arial,sans-serif;
+  }
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--grid);border-radius:4px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">Semana 1 · Arquitectura de Computadoras · UPC + Minerva</div>
+  <h1>Simulador de sistemas de numeración</h1>
+  <div class="sub">Practica y verifica conversiones entre decimal, binario, octal y hexadecimal — paso a paso, sin calculadora.</div>
+
+  <!-- CONVERSOR -->
+  <div class="panel">
+    <h2>Conversor interactivo</h2>
+    <div class="input-row">
+      <div>
+        <label>Base de entrada</label><br>
+        <div class="base-select" id="baseSelect">
+          <button class="base-btn active" data-base="10">Decimal</button>
+          <button class="base-btn" data-base="2">Binario</button>
+          <button class="base-btn" data-base="8">Octal</button>
+          <button class="base-btn" data-base="16">Hexadecimal</button>
+        </div>
+      </div>
+      <div>
+        <label>Valor</label><br>
+        <input type="text" id="inputValue" value="156" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="results" id="resultsGrid"></div>
+
+    <button class="toggle-btn" id="toggleSteps">Mostrar procedimiento paso a paso ▾</button>
+    <div class="steps" id="stepsBox" style="display:none;"></div>
+  </div>
+
+  <!-- PRACTICA -->
+  <div class="panel magenta">
+    <h2>Modo práctica — reto de conversión</h2>
+    <div class="challenge">
+      <span>Convierte</span>
+      <span class="val-big" id="challVal">156</span>
+      <span class="arrow">→</span>
+      <span class="target" id="challTarget">binario</span>
+    </div>
+    <div class="answer-row">
+      <input type="text" id="challAnswer" placeholder="Escribe tu respuesta">
+      <button class="primary" id="checkBtn">Verificar</button>
+      <button class="secondary" id="newBtn">Nuevo reto</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <div class="score" id="score">Aciertos: 0 · Intentos: 0</div>
+  </div>
+
+  <!-- CASO INICIAL -->
+  <div class="panel">
+    <h2>Caso inicial de la sesión</h2>
+    <div class="case-box">
+      <div class="case-text">
+        Un sistema de control de acceso registra el código de cada tarjeta en formato hexadecimal,
+        pero el firmware del lector solo procesa valores en binario de 8 bits. Una tarjeta con código
+        <b>9C</b> (hex) fue rechazada. Otra con código <b>A3</b> (hex) sí funcionó.
+        Usa el conversor para revisar ambos códigos en binario de 8 bits y formula tu hipótesis.
+      </div>
+      <div class="case-actions">
+        <button class="secondary" id="loadCase9C">Cargar 9C (hex)</button>
+        <button class="secondary" id="loadCaseA3">Cargar A3 (hex)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">Arquitectura de Computadoras (1ASI0772) · Material vinculado al Plan de Clase — Semana 1</div>
+</div>
+
+<script>
+let currentBase = 10;
+
+const baseNames = {2:"binario", 8:"octal", 10:"decimal", 16:"hexadecimal"};
+const validChars = {2:"01", 8:"01234567", 10:"0123456789", 16:"0123456789ABCDEF"};
+
+function isValidInBase(str, base){
+  if(str.trim()==="") return false;
+  const chars = validChars[base];
+  return [...str.toUpperCase()].every(c => chars.includes(c));
+}
+
+function toDecimal(str, base){
+  return parseInt(str, base);
+}
+
+function fromDecimal(n, base){
+  if(isNaN(n)) return "";
+  return n.toString(base).toUpperCase();
+}
+
+function buildStepsDecToBase(decVal, base){
+  if(decVal === 0) return "<b>0</b> → resultado: 0";
+  let steps = [];
+  let n = decVal;
+  let residues = [];
+  while(n > 0){
+    const q = Math.floor(n/base);
+    const r = n % base;
+    const rDisplay = r.toString(base).toUpperCase();
+    steps.push(`${n} ÷ ${base} = ${q}   <span class="r">residuo ${rDisplay}</span>`);
+    residues.push(rDisplay);
+    n = q;
+  }
+  const result = residues.reverse().join("");
+  return steps.join("<br>") + `<br><br><b>Se leen los residuos de abajo hacia arriba → ${result}</b>`;
+}
+
+function renderResults(){
+  const raw = document.getElementById('inputValue').value.trim();
+  const grid = document.getElementById('resultsGrid');
+  const stepsBox = document.getElementById('stepsBox');
+  grid.innerHTML = "";
+
+  if(!isValidInBase(raw, currentBase)){
+    grid.innerHTML = `<div class="result-card"><div class="lbl">Error</div><div class="val" style="color:var(--err);font-size:14px;">Valor no válido en base ${currentBase} (${baseNames[currentBase]})</div></div>`;
+    stepsBox.innerHTML = "";
+    return;
+  }
+
+  const dec = toDecimal(raw, currentBase);
+  const bases = [10,2,8,16];
+  bases.forEach((b,i) => {
+    const val = fromDecimal(dec, b);
+    const card = document.createElement('div');
+    card.className = "result-card" + (i%2===1 ? " mag" : "");
+    card.innerHTML = `<div class="lbl">${baseNames[b]}</div><div class="val">${val}</div>`;
+    grid.appendChild(card);
+  });
+
+  let stepsHtml = `<b>Valor en decimal: ${dec}</b><br><br>`;
+  stepsHtml += "<b>→ Binario</b><br>" + buildStepsDecToBase(dec,2) + "<br><br>";
+  stepsHtml += "<b>→ Octal</b><br>" + buildStepsDecToBase(dec,8) + "<br><br>";
+  stepsHtml += "<b>→ Hexadecimal</b><br>" + buildStepsDecToBase(dec,16);
+  stepsBox.innerHTML = stepsHtml;
+}
+
+document.getElementById('baseSelect').addEventListener('click', (e) => {
+  if(!e.target.classList.contains('base-btn')) return;
+  document.querySelectorAll('.base-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  currentBase = parseInt(e.target.dataset.base);
+  renderResults();
+});
+
+document.getElementById('inputValue').addEventListener('input', renderResults);
+
+document.getElementById('toggleSteps').addEventListener('click', (e) => {
+  const box = document.getElementById('stepsBox');
+  const show = box.style.display === 'none';
+  box.style.display = show ? 'block' : 'none';
+  e.target.textContent = show ? 'Ocultar procedimiento paso a paso ▴' : 'Mostrar procedimiento paso a paso ▾';
+});
+
+/* ---------- Practica ---------- */
+let currentChallenge = {};
+let stats = {correct:0, attempts:0};
+
+function newChallenge(){
+  const dec = Math.floor(Math.random()*250)+2;
+  const targets = [2,8,16];
+  const targetBase = targets[Math.floor(Math.random()*targets.length)];
+  currentChallenge = { dec, targetBase, answer: fromDecimal(dec, targetBase) };
+  document.getElementById('challVal').textContent = dec;
+  document.getElementById('challTarget').textContent = baseNames[targetBase];
+  document.getElementById('challAnswer').value = "";
+  document.getElementById('feedback').textContent = "";
+  document.getElementById('feedback').className = "feedback";
+}
+
+document.getElementById('checkBtn').addEventListener('click', () => {
+  const userAns = document.getElementById('challAnswer').value.trim().toUpperCase();
+  const fb = document.getElementById('feedback');
+  if(userAns === ""){
+    fb.textContent = "Escribe una respuesta antes de verificar.";
+    fb.className = "feedback err";
+    return;
+  }
+  stats.attempts++;
+  if(userAns === currentChallenge.answer){
+    stats.correct++;
+    fb.textContent = "Correcto — " + currentChallenge.dec + " = " + currentChallenge.answer + " en " + baseNames[currentChallenge.targetBase] + ".";
+    fb.className = "feedback ok";
+  } else {
+    fb.textContent = "Aún no. Respuesta correcta: " + currentChallenge.answer + ". Revisa el procedimiento en el conversor de arriba.";
+    fb.className = "feedback err";
+  }
+  document.getElementById('score').textContent = `Aciertos: ${stats.correct} · Intentos: ${stats.attempts}`;
+});
+
+document.getElementById('newBtn').addEventListener('click', newChallenge);
+document.getElementById('challAnswer').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') document.getElementById('checkBtn').click();
+});
+
+/* ---------- Caso inicial shortcuts ---------- */
+function loadCaseValue(hex){
+  document.querySelectorAll('.base-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.base-btn[data-base="16"]').classList.add('active');
+  currentBase = 16;
+  document.getElementById('inputValue').value = hex;
+  renderResults();
+  document.getElementById('stepsBox').style.display = 'block';
+  document.getElementById('toggleSteps').textContent = 'Ocultar procedimiento paso a paso ▴';
+  document.querySelector('.panel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+document.getElementById('loadCase9C').addEventListener('click', () => loadCaseValue('9C'));
+document.getElementById('loadCaseA3').addEventListener('click', () => loadCaseValue('A3'));
+
+/* init */
+renderResults();
+newChallenge();
+</script>
+</body>
+</html>
