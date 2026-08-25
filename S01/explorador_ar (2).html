@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explorador AR — Partes de la Computadora | Semana 1 EPE</title>
+<style>
+  :root{
+    --navy:#1B2A41;
+    --navy2:#24374F;
+    --copper:#A9714B;
+    --copper-lt:#C99873;
+    --teal:#2E7D6B;
+    --card:#F7F8FA;
+    --text:#2B2B2B;
+    --muted:#6B7280;
+    --line:#E3E6EA;
+    --mono:'Courier New', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:Arial, Helvetica, sans-serif; color:var(--text);
+    background-color:#FFFFFF;
+    background-image:radial-gradient(var(--line) 1px, transparent 1px);
+    background-size:24px 24px;
+    padding:0;
+  }
+  header{
+    background:#fff; border-bottom:1px solid var(--line); padding:22px 32px 18px;
+    position:sticky; top:0; z-index:40; backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-icon{
+    width:42px; height:42px; border-radius:10px; background:#FBF0E7; border:1px solid var(--copper-lt);
+    display:flex; align-items:center; justify-content:center; position:relative; flex:none;
+  }
+  .brand-icon svg{width:22px; height:22px;}
+  .live-dot{position:absolute; top:-3px; right:-3px; width:10px; height:10px;}
+  .live-dot .ring{position:absolute; inset:0; border-radius:50%; background:var(--teal); opacity:.6; animation:ping 1.8s cubic-bezier(0,0,.2,1) infinite;}
+  .live-dot .core{position:absolute; inset:2.5px; border-radius:50%; background:var(--teal);}
+  @keyframes ping{0%{transform:scale(1); opacity:.6;} 75%,100%{transform:scale(2.4); opacity:0;}}
+  header .kicker{color:var(--copper); font-size:11px; font-weight:bold; letter-spacing:2.5px; margin-bottom:2px;}
+  header h1{margin:0; font-size:19px; color:var(--navy); letter-spacing:.3px;}
+  header p{margin:0; color:var(--muted); font-size:12.5px;}
+  .mode-badge{
+    display:flex; align-items:center; gap:6px; font-size:11px; font-weight:bold; color:var(--teal);
+    background:#EAF5F1; border:1px solid #BFE0D6; padding:6px 12px; border-radius:999px; letter-spacing:.5px;
+  }
+  .mode-badge .dot{width:7px; height:7px; border-radius:50%; background:var(--teal); animation:ping 1.8s infinite;}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:26px 20px 60px;}
+  .intro{background:linear-gradient(120deg,#fff 60%, #FBF0E7 130%); border:1px solid var(--line); border-radius:16px;
+    padding:22px 26px; margin-bottom:22px; position:relative; overflow:hidden;}
+  .intro .eyebrow{font-size:11px; font-weight:bold; letter-spacing:2px; color:var(--copper); background:#FBF0E7;
+    border:1px solid var(--copper-lt); padding:4px 10px; border-radius:999px; display:inline-block;}
+  .intro h2{margin:10px 0 8px; font-size:21px; color:var(--navy);}
+  .intro p{margin:0; font-size:13.5px; color:var(--muted); max-width:720px; line-height:1.55;}
+
+  .ar-grid{display:grid; grid-template-columns:0.95fr 1.35fr 1fr; gap:20px; align-items:start;}
+
+  /* --- panel izquierdo: lista rápida + glosario --- */
+  .side-card{background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:18px;
+    box-shadow:0 1px 3px rgba(27,42,65,0.04);}
+  .side-card h3{margin:0 0 12px; font-size:13px; color:var(--navy); border-bottom:1px solid var(--line);
+    padding-bottom:10px; display:flex; align-items:center; justify-content:space-between;}
+  .side-card h3 .hint{font-size:10px; font-weight:normal; color:var(--muted);}
+  .comp-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .comp-btn{
+    display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line);
+    border-radius:10px; padding:8px 9px; cursor:pointer; text-align:left; transition:all .18s ease;
+  }
+  .comp-btn:hover{border-color:var(--copper-lt);}
+  .comp-btn.selected{border-color:var(--copper); background:#FBF0E7; box-shadow:0 0 0 3px rgba(169,113,75,.12);}
+  .comp-btn .ico{width:22px; height:22px; flex:none; color:var(--navy);}
+  .comp-btn .ico svg{width:100%; height:100%;}
+  .comp-btn .txt{min-width:0;}
+  .comp-btn .cat{font-size:8px; font-weight:bold; color:var(--muted); letter-spacing:.5px; text-transform:uppercase;}
+  .comp-btn .nm{font-size:11px; font-weight:bold; color:var(--navy); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
+  .gloss-item{padding:9px 10px; background:var(--card); border:1px solid var(--line); border-radius:10px; margin-bottom:8px;}
+  .gloss-item:last-child{margin-bottom:0;}
+  .gloss-item .term{font-size:11.5px; font-weight:bold; color:var(--copper); display:block; margin-bottom:2px;}
+  .gloss-item .def{font-size:11px; color:var(--muted); line-height:1.45;}
+
+  /* --- centro: placa AR --- */
+  .board-panel{background:#fff; border:1px solid var(--line); border-radius:16px; padding:14px; position:relative;
+    overflow:hidden; box-shadow:0 1px 3px rgba(27,42,65,0.04), 0 10px 30px rgba(27,42,65,0.06);}
+  .board-topbar{display:flex; align-items:center; justify-content:space-between; padding:2px 6px 12px; position:relative; z-index:5;}
+  .live-tag{display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:var(--teal); letter-spacing:1px;}
+  .live-tag .dot{width:7px; height:7px; border-radius:50%; background:var(--teal); animation:ping 1.6s infinite;}
+  .board-actions{display:flex; gap:6px;}
+  .icon-btn{
+    background:#fff; border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:7px 11px;
+    font-family:inherit; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px;
+    transition:all .18s ease;
+  }
+  .icon-btn:hover{border-color:var(--copper-lt); color:var(--navy);}
+  .icon-btn svg{width:13px; height:13px;}
+
+  .scan-frame{
+    position:relative; border-radius:12px; border:1px solid var(--line); background:
+      radial-gradient(circle at 12% 10%, rgba(169,113,75,0.05), transparent 45%),
+      radial-gradient(circle at 88% 90%, rgba(46,125,107,0.05), transparent 45%);
+    overflow:hidden; padding:6px;
+  }
+  .scanline{
+    position:absolute; left:0; width:100%; height:2.5px; z-index:6; pointer-events:none;
+    background:linear-gradient(90deg, transparent, var(--teal), var(--copper), var(--teal), transparent);
+    opacity:.55; animation:scan 4.5s linear infinite;
+  }
+  @keyframes scan{0%{top:2%;} 50%{top:96%;} 100%{top:2%;}}
+
+  .board-3d-wrap{perspective:1300px; padding:18px 6px 10px;}
+  .board-3d{
+    transform-style:preserve-3d; transform:rotateX(32deg) rotateZ(-14deg);
+    transition:transform .7s cubic-bezier(.2,.8,.2,1); filter:drop-shadow(0 24px 20px rgba(27,42,65,0.12));
+  }
+  .board-3d.flat{transform:rotateX(0) rotateZ(0); filter:drop-shadow(0 4px 10px rgba(27,42,65,0.06));}
+  svg.board-svg{width:100%; height:auto; display:block; overflow:visible;}
+  .board-bg{fill:var(--card); stroke:var(--line); stroke-width:1.5;}
+  .board-grid-line{stroke:rgba(27,42,65,0.05); stroke-width:1;}
+
+  .trace{fill:none; stroke:var(--line); stroke-width:2;}
+  .trace-pulse{fill:none; stroke-width:2; stroke-dasharray:7 10; opacity:.35; animation:dash 1.1s linear infinite;}
+  .trace-pulse.on{opacity:1; filter:url(#softGlow);}
+  @keyframes dash{to{stroke-dashoffset:-34;}}
+
+  .chipx{cursor:pointer;}
+  .chipx rect, .chipx circle{fill:#fff; stroke:var(--navy2); stroke-width:1.6; transition:all .2s ease;}
+  .chipx .ic{stroke:var(--navy2); stroke-width:1.6; fill:none; transition:stroke .2s ease;}
+  .chipx text{font-family:Arial, Helvetica, sans-serif; font-size:9.5px; font-weight:bold; fill:var(--navy); pointer-events:none;}
+  .chipx:hover rect, .chipx:hover circle{stroke:var(--copper);}
+  .chipx:hover .ic{stroke:var(--copper);}
+  .chipx.selected rect, .chipx.selected circle{fill:#FBF0E7; stroke:var(--copper); filter:url(#softGlow);}
+  .chipx.selected .ic{stroke:var(--copper);}
+  .chipx.selected text{fill:var(--copper);}
+
+  .fan-blades{transform-origin:180px 90px; animation:spin 3.2s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .gpu-bar-fill{animation:loadpulse 2.2s ease-in-out infinite;}
+  @keyframes loadpulse{0%,100%{opacity:.45; transform:scaleX(.55);} 50%{opacity:1; transform:scaleX(.85);}}
+
+  .scan-corner{fill:none; stroke:var(--copper); stroke-width:2.6; stroke-linecap:round;
+    stroke-dasharray:26; stroke-dashoffset:26; transition:stroke-dashoffset .4s ease;}
+  .scan-brackets.show .scan-corner{stroke-dashoffset:0;}
+
+  .board-footer{display:flex; align-items:center; justify-content:space-between; padding:12px 8px 2px; font-size:11px; color:var(--muted);}
+  .board-footer .status{display:flex; align-items:center; gap:6px; color:var(--teal); font-weight:bold;}
+  .board-footer .status .dot{width:7px; height:7px; border-radius:50%; background:var(--teal);}
+  .coords{font-family:var(--mono); font-size:10px; color:var(--muted); position:absolute; bottom:10px; right:14px; z-index:5;}
+
+  /* --- derecha: ficha técnica --- */
+  .ar-detail{border:1px solid var(--line); border-radius:16px; padding:20px 22px; min-height:520px;
+    background:#fff; box-shadow:0 1px 3px rgba(27,42,65,0.04); display:flex; flex-direction:column; justify-content:space-between;}
+  .ar-empty{flex-grow:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;}
+  .ar-empty .scan-ico{width:52px; height:52px; border:1.5px dashed var(--line); border-radius:16px; display:flex; align-items:center;
+    justify-content:center; color:var(--muted); margin-bottom:14px; animation:bob 2.4s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);}}
+  .ar-empty h4{margin:0; font-size:14px; color:var(--navy);}
+  .ar-empty p{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5;}
+
+  .ar-content{display:none; flex-grow:1; flex-direction:column; animation:fadeUp .3s ease;}
+  .ar-content.show{display:flex;}
+  @keyframes fadeUp{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .ar-cat{display:inline-block; font-size:9.5px; font-weight:bold; letter-spacing:1px; color:var(--teal);
+    background:#EAF5F1; border:1px solid #BFE0D6; padding:3px 9px; border-radius:999px; margin-bottom:10px;}
+  .ar-detail h3{margin:0 0 4px; font-size:19px; color:var(--navy);}
+  .ar-short{font-size:12px; color:var(--copper); font-weight:bold; margin-bottom:12px;}
+  .ar-detail .desc{font-size:13px; line-height:1.55; color:var(--text); margin-bottom:14px;}
+  .spec-box{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:10px;}
+  .spec-box .lbl{font-size:9.5px; font-weight:bold; letter-spacing:1px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;}
+  .spec-box .val{font-size:12px; color:var(--text);}
+  .spec-box.amber .val{color:var(--copper); font-weight:bold;}
+  .techlevel{display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--muted);
+    border-top:1px solid var(--line); padding-top:12px; margin-top:auto;}
+  .techlevel span:last-child{color:var(--navy); font-weight:bold; background:var(--card); padding:4px 10px; border-radius:8px;}
+
+  footer.pagefoot{text-align:center; color:var(--muted); font-size:12px; padding:24px;}
+
+  @media (max-width:980px){
+    .ar-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+</svg>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--copper)" stroke-width="1.8"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg>
+      <span class="live-dot"><span class="ring"></span><span class="core"></span></span>
+    </div>
+    <div>
+      <div class="kicker">EPE · 1FIS0277 · SEMANA 1</div>
+      <h1>Explorador AR — Partes de la Computadora</h1>
+    </div>
+  </div>
+  <div class="mode-badge"><span class="dot"></span> MODO ESCANER ACTIVO</div>
+</header>
+
+<div class="wrap">
+
+  <div class="intro">
+    <span class="eyebrow">MÓDULO DIDÁCTICO</span>
+    <h2>Escanea el interior de una computadora</h2>
+    <p>Selecciona cualquier componente en el listado o directamente sobre la placa para desplegar su ficha técnica, ver qué bus lo conecta con el resto del sistema y girar el diagrama en 3D.</p>
+  </div>
+
+  <div class="ar-grid">
+
+    <!-- ===== IZQUIERDA ===== -->
+    <div>
+      <div class="side-card">
+        <h3>COMPONENTES <span class="hint">Clic para escanear</span></h3>
+        <div class="comp-grid" id="components-list"></div>
+      </div>
+      <div class="side-card">
+        <h3>CONCEPTOS CRÍTICOS</h3>
+        <div id="glossary"></div>
+      </div>
+    </div>
+
+    <!-- ===== CENTRO: PLACA AR ===== -->
+    <div class="board-panel">
+      <div class="board-topbar">
+        <div class="live-tag"><span class="dot"></span> HOLOGRAMA EN VIVO</div>
+        <div class="board-actions">
+          <button class="icon-btn" id="btn-rotate" title="Girar placa">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+            GIRAR
+          </button>
+          <button class="icon-btn" id="btn-tilt" title="Alternar vista 3D/plana">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/></svg>
+            <span id="tilt-label">VISTA 3D</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="scan-frame">
+        <div class="scanline"></div>
+        <div class="board-3d-wrap">
+          <div class="board-3d" id="board-3d">
+            <svg class="board-svg" viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg" id="board-svg">
+              <rect class="board-bg" x="10" y="10" width="620" height="460" rx="18"/>
+              <path class="board-grid-line" d="M10,170 H630 M10,330 H630 M220,10 V470 M430,10 V470"/>
+
+              <!-- trazas -->
+              <path class="trace" d="M315,280 L315,300"/>
+              <path class="trace-pulse" id="tp-cpu-chipset" data-key="chipset" d="M315,280 L315,300"/>
+
+              <path class="trace" d="M295,322 L365,317"/>
+              <path class="trace-pulse" id="tp-chipset-bios" data-key="bios" d="M295,322 L365,317"/>
+
+              <path class="trace" d="M250,190 C180,190 150,205 150,240"/>
+              <path class="trace-pulse" id="tp-cpu-ssd" data-key="ssd" d="M250,190 C180,190 150,205 150,240"/>
+
+              <path class="trace" d="M250,235 C170,270 130,290 95,300"/>
+              <path class="trace-pulse" id="tp-cpu-psu" data-key="psu" d="M250,235 C170,270 130,290 95,300"/>
+
+              <path class="trace" d="M380,210 C410,210 430,180 430,125"/>
+              <path class="trace-pulse" id="tp-cpu-ram" data-key="ram" d="M380,210 C410,210 430,180 430,125"/>
+
+              <path class="trace" d="M315,280 C315,340 300,360 295,360"/>
+              <path class="trace-pulse" id="tp-cpu-gpu" data-key="gpu" d="M315,280 C315,340 300,360 295,360"/>
+
+              <path class="trace" d="M365,317 C480,317 530,310 560,300"/>
+              <path class="trace-pulse" id="tp-chipset-io" data-key="io" d="M365,317 C480,317 530,310 560,300"/>
+
+              <path class="trace" d="M225,150 C200,150 190,130 180,120"/>
+              <path class="trace-pulse" id="tp-cpu-cooler" data-key="cooler" d="M225,150 C200,150 190,130 180,120"/>
+
+              <!-- COOLER -->
+              <g class="chipx" data-key="cooler">
+                <circle cx="180" cy="90" r="55" stroke-dasharray="6 5"/>
+                <g class="fan-blades ic">
+                  <ellipse cx="180" cy="70" rx="8" ry="18"/>
+                  <ellipse cx="198" cy="102" rx="8" ry="18" transform="rotate(120 198 102)"/>
+                  <ellipse cx="162" cy="102" rx="8" ry="18" transform="rotate(-120 162 102)"/>
+                  <circle cx="180" cy="90" r="6" fill="#fff"/>
+                </g>
+                <text x="180" y="140" text-anchor="middle">COOLER</text>
+              </g>
+
+              <!-- CPU -->
+              <g class="chipx" data-key="cpu">
+                <rect x="250" y="150" width="130" height="130" rx="8"/>
+                <path class="ic" d="M290 190h50v50h-50z M300 178v12 M320 178v12 M340 178v12 M300 300v-12 M320 300v-12 M340 300v-12 M278 200h12 M278 220h12 M278 240h12 M352 200h12 M352 220h12 M352 240h12"/>
+                <text x="315" y="322" text-anchor="middle">CPU</text>
+              </g>
+
+              <!-- CHIPSET -->
+              <g class="chipx" data-key="chipset">
+                <rect x="260" y="300" width="70" height="45" rx="6"/>
+                <path class="ic" d="M283 313l6 6-6 6 6 6M307 313l-6 6 6 6-6 6" transform="translate(0,-2) scale(.9) translate(9,4)"/>
+                <text x="295" y="357" text-anchor="middle" font-size="8">CHIPSET</text>
+              </g>
+
+              <!-- BIOS -->
+              <g class="chipx" data-key="bios">
+                <rect x="340" y="300" width="50" height="35" rx="5"/>
+                <text x="365" y="321" text-anchor="middle" font-family="Courier New, monospace" font-size="11" fill="var(--teal)">&gt;_</text>
+                <text x="365" y="347" text-anchor="middle" font-size="7.5">BIOS</text>
+              </g>
+
+              <!-- RAM -->
+              <g class="chipx" data-key="ram">
+                <rect x="430" y="40" width="20" height="170" rx="4"/>
+                <rect x="458" y="40" width="20" height="170" rx="4"/>
+                <rect x="486" y="40" width="20" height="170" rx="4"/>
+                <path class="ic" d="M436 55h8M436 65h8M464 55h8M464 65h8M492 55h8M492 65h8"/>
+                <text x="468" y="230" text-anchor="middle">RAM DDR5</text>
+              </g>
+
+              <!-- SSD -->
+              <g class="chipx" data-key="ssd">
+                <rect x="40" y="200" width="110" height="40" rx="6"/>
+                <path class="ic" d="M62 210l-7 12h6l-6 10 14-14h-6l6-8z"/>
+                <text x="105" y="224" text-anchor="middle" font-size="8">SSD NVMe</text>
+              </g>
+
+              <!-- PSU -->
+              <g class="chipx" data-key="psu">
+                <rect x="40" y="300" width="110" height="90" rx="8"/>
+                <path class="ic" d="M85 328v14M105 328v14M78 342h34v10a17 17 0 0 1-34 0z"/>
+                <text x="95" y="378" text-anchor="middle" font-size="8">POWER SUPPLY</text>
+              </g>
+
+              <!-- GPU -->
+              <g class="chipx" data-key="gpu">
+                <rect x="190" y="360" width="210" height="72" rx="8"/>
+                <circle class="ic" cx="215" cy="380" r="8"/>
+                <circle class="ic" cx="240" cy="380" r="8"/>
+                <rect x="200" y="405" width="180" height="6" rx="3" fill="var(--line)" stroke="none"/>
+                <rect class="gpu-bar-fill" x="200" y="405" width="180" height="6" rx="3" fill="var(--teal)" stroke="none" style="transform-origin:200px 408px;"/>
+                <text x="295" y="426" text-anchor="middle" font-size="8">GPU GEFORCE</text>
+              </g>
+
+              <!-- I/O -->
+              <g class="chipx" data-key="io">
+                <rect x="560" y="230" width="18" height="150" rx="4"/>
+                <path class="ic" d="M565 245h8M565 258h8M565 271h8M565 284h8M565 297h8"/>
+                <text x="569" y="395" text-anchor="middle" font-size="7.5">I/O</text>
+              </g>
+
+              <!-- corchetes de escaneo -->
+              <g class="scan-brackets" id="scan-brackets">
+                <path class="scan-corner" id="sc-tl" d=""/>
+                <path class="scan-corner" id="sc-tr" d=""/>
+                <path class="scan-corner" id="sc-bl" d=""/>
+                <path class="scan-corner" id="sc-br" d=""/>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div class="coords" id="coords">X: 00.00 | Y: 00.00</div>
+      </div>
+
+      <div class="board-footer">
+        <span>Toca cualquier componente del diagrama para examinarlo</span>
+        <span class="status"><span class="dot"></span> CALIBRADO</span>
+      </div>
+    </div>
+
+    <!-- ===== DERECHA: FICHA TÉCNICA ===== -->
+    <div class="ar-detail">
+      <div class="ar-empty" id="ar-empty">
+        <div class="scan-ico">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <h4>Escáner AR en espera</h4>
+        <p>Selecciona un componente en el panel izquierdo o directamente sobre la placa para desplegar su holograma descriptivo.</p>
+      </div>
+
+      <div class="ar-content" id="ar-content">
+        <span class="ar-cat" id="d-cat">CATEGORÍA</span>
+        <h3 id="d-title">Nombre</h3>
+        <div class="ar-short" id="d-short">Descripción corta</div>
+        <div class="desc" id="d-desc">Descripción completa.</div>
+        <div class="spec-box">
+          <div class="lbl">Conectividad de bus</div>
+          <div class="val" id="d-conn">—</div>
+        </div>
+        <div class="spec-box amber">
+          <div class="lbl">Ejemplo técnico</div>
+          <div class="val" id="d-example">—</div>
+        </div>
+        <div class="techlevel"><span>Nivel técnico</span><span id="d-level">—</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer class="pagefoot">1FIS0277 · EPE UPC · Semana 1 — Arquitectura de Computadoras y Sistemas Operativos</footer>
+
+<script>
+// ---------------- ÍCONOS (mini SVG por categoría, sin librerías externas) ----------------
+const icons = {
+  cpu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="7" width="10" height="10" rx="1"/><path d="M9 3v3M13 3v3M9 18v3M13 18v3M3 9h3M3 13h3M18 9h3M18 13h3"/></svg>',
+  ram: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="6" width="4" height="13" rx="1"/><rect x="10" y="6" width="4" height="13" rx="1"/><rect x="16" y="6" width="4" height="13" rx="1"/></svg>',
+  ssd: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 3L4 14h6l-1 7 9-11h-6l1-7z"/></svg>',
+  psu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3v6M15 3v6M7 9h10v4a5 5 0 0 1-10 0V9zM12 18v3"/></svg>',
+  gpu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="12" r="2"/><path d="M17 12h2"/></svg>',
+  chipset: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>',
+  bios: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg>',
+  cooler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="2"/><path d="M12 10c0-3 1-6 4-6s2 4-1 5M12 14c0 3-1 6-4 6s-2-4 1-5M10 12c-3 0-6-1-6-4s4-2 5 1M14 12c3 0 6 1 6 4s-4 2-5-1"/></svg>',
+  io: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/><path d="M4 6h4M4 12h4M4 18h4"/></svg>'
+};
+
+// ---------------- BASE DE DATOS DE COMPONENTES ----------------
+const hardwareComponents = {
+  cpu: { name:"CPU / Procesador", category:"PROCESAMIENTO",
+    short:"El motor de cálculo central.",
+    desc:"La CPU es el cerebro del computador. Recibe instrucciones, las interpreta y coordina las operaciones necesarias para ejecutarlas mediante el ciclo Fetch-Decode-Execute-Store, coordinando a la Unidad de Control, la ALU y los registros.",
+    conn:"Se conecta con la RAM y el chipset a través del bus de sistema, en un zócalo (socket) soldado a la placa madre.",
+    example:"Al presionar una tecla, decodifica y ejecuta la instrucción correspondiente en microsegundos.",
+    level:"Intermedio" },
+  ram: { name:"Memoria RAM", category:"ALMACENAMIENTO TEMPORAL",
+    short:"Memoria de acceso aleatorio de alta velocidad.",
+    desc:"Guarda temporalmente los programas y datos que la CPU necesita de forma inmediata. Es volátil: toda su información se borra al apagar el equipo.",
+    conn:"Insertada en ranuras DIMM; se comunica con la CPU mediante el bus de memoria (canal dual/quad).",
+    example:"Mantiene abiertas varias pestañas del navegador de forma simultánea.",
+    level:"Básico" },
+  ssd: { name:"Almacenamiento SSD NVMe", category:"MEMORIA PERMANENTE",
+    short:"Almacenamiento de estado sólido no volátil.",
+    desc:"Usa chips de memoria flash para guardar el sistema operativo y los archivos del usuario de forma permanente, con velocidades muy superiores a un disco mecánico.",
+    conn:"Se acopla a ranuras PCIe M.2, reduciendo drásticamente la latencia de transferencia.",
+    example:"Permite que el sistema operativo inicie en segundos.",
+    level:"Básico" },
+  psu: { name:"Fuente de Poder ATX", category:"ENERGÍA",
+    short:"Transformador y distribuidor de corriente.",
+    desc:"Convierte la corriente alterna de la red doméstica en corriente continua de bajo voltaje, regulada para los delicados microchips internos.",
+    conn:"Cables modulares que entregan 12V, 5V y 3.3V a placa madre, CPU, GPU y almacenamiento.",
+    example:"Protege al equipo frente a picos de voltaje.",
+    level:"Básico" },
+  gpu: { name:"Tarjeta Gráfica (GPU)", category:"PROCESAMIENTO GRÁFICO",
+    short:"Procesador especializado en paralelismo masivo.",
+    desc:"Libera a la CPU de la carga matemática de renderizar imágenes y escenas 3D complejas, gracias a miles de núcleos simples trabajando en paralelo.",
+    conn:"Conectada a la ranura PCIe x16 y al monitor mediante HDMI o DisplayPort.",
+    example:"Procesa millones de polígonos por segundo en un videojuego 3D.",
+    level:"Intermedio" },
+  chipset: { name:"Chipset del Sistema", category:"CONTROL",
+    short:"El centro de control de comunicaciones.",
+    desc:"Circuito que gestiona el intercambio de datos entre la CPU y los periféricos más lentos: USB, red, sonido y almacenamiento secundario.",
+    conn:"Soldado a la placa madre; interconecta a la CPU con el resto de componentes vía PCIe / DMI.",
+    example:"Permite que el CPU reciba al instante la señal de un mouse USB.",
+    level:"Avanzado" },
+  bios: { name:"BIOS / UEFI", category:"SISTEMA INICIAL",
+    short:"Firmware de arranque e inventariado inicial.",
+    desc:"Chip de memoria no volátil con las instrucciones fundamentales para arrancar el equipo. Ejecuta el test POST antes de cargar el sistema operativo.",
+    conn:"Chip integrado en la placa madre, activo desde el primer microsegundo de encendido.",
+    example:"Verifica que exista RAM instalada antes de permitir el arranque.",
+    level:"Avanzado" },
+  cooler: { name:"Sistema de Enfriamiento", category:"ESTABILIDAD TÉRMICA",
+    short:"Disipador térmico de la CPU.",
+    desc:"Aleja el calor generado por millones de conmutaciones por segundo en el procesador, evitando el throttling térmico y daños al equipo.",
+    conn:"Se ancla con pasta térmica directamente sobre la CPU.",
+    example:"Mantiene la temperatura del procesador bajo control incluso en carga máxima.",
+    level:"Básico" },
+  io: { name:"Puertos de Entrada/Salida", category:"INTERFACES",
+    short:"Puertos físicos de comunicación externa.",
+    desc:"USB, red, video y audio: permiten que la arquitectura interna interactúe con periféricos externos.",
+    conn:"Soldados al panel trasero de la placa madre, con pistas ruteadas hacia el chipset.",
+    example:"Envía la señal de video digital al monitor.",
+    level:"Básico" }
+};
+
+const glossaryTerms = [
+  { term:"Instrucción", def:"Mandato en binario que el procesador puede decodificar y ejecutar directamente." },
+  { term:"Bus del sistema", def:"Canal físico que transporta datos, direcciones o señales de control entre componentes." },
+  { term:"Frecuencia de CPU", def:"Velocidad de ciclos por segundo, medida en GHz." },
+  { term:"Latencia", def:"Tiempo de retardo que tarda un componente en responder a una solicitud." }
+];
+
+// ---------------- RENDERIZADO ----------------
+function renderComponentsList(){
+  const container = document.getElementById('components-list');
+  Object.entries(hardwareComponents).forEach(([key, c])=>{
+    const btn = document.createElement('button');
+    btn.className = 'comp-btn';
+    btn.id = 'list-'+key;
+    btn.innerHTML = `<span class="ico">${icons[key]}</span><span class="txt"><span class="cat">${c.category.split(' ')[0]}</span><span class="nm">${c.name.split(' / ')[0].split(' (')[0]}</span></span>`;
+    btn.addEventListener('click', ()=>selectComponent(key));
+    container.appendChild(btn);
+  });
+}
+function renderGlossary(){
+  const container = document.getElementById('glossary');
+  glossaryTerms.forEach(g=>{
+    const div = document.createElement('div');
+    div.className = 'gloss-item';
+    div.innerHTML = `<span class="term">${g.term}</span><span class="def">${g.def}</span>`;
+    container.appendChild(div);
+  });
+}
+
+// ---------------- SELECCIÓN DE COMPONENTE ----------------
+let currentKey = null;
+function selectComponent(key){
+  const c = hardwareComponents[key];
+  if (!c) return;
+  currentKey = key;
+
+  document.querySelectorAll('.comp-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('list-'+key).classList.add('selected');
+
+  document.querySelectorAll('.chipx').forEach(g=>g.classList.remove('selected'));
+  const groupEl = document.querySelector(`.chipx[data-key="${key}"]`);
+  groupEl.classList.add('selected');
+
+  document.querySelectorAll('.trace-pulse').forEach(p=>p.classList.remove('on'));
+  const traceEl = document.querySelector(`.trace-pulse[data-key="${key}"]`);
+  if (traceEl) traceEl.classList.add('on');
+
+  // corchetes de escaneo posicionados por bbox real
+  const bbox = groupEl.getBBox();
+  const pad = 9;
+  const x1 = bbox.x - pad, y1 = bbox.y - pad, x2 = bbox.x + bbox.width + pad, y2 = bbox.y + bbox.height + pad;
+  const L = 15;
+  document.getElementById('sc-tl').setAttribute('d', `M${x1},${y1+L} L${x1},${y1} L${x1+L},${y1}`);
+  document.getElementById('sc-tr').setAttribute('d', `M${x2-L},${y1} L${x2},${y1} L${x2},${y1+L}`);
+  document.getElementById('sc-bl').setAttribute('d', `M${x1},${y2-L} L${x1},${y2} L${x1+L},${y2}`);
+  document.getElementById('sc-br').setAttribute('d', `M${x2-L},${y2} L${x2},${y2} L${x2},${y2-L}`);
+  const brackets = document.getElementById('scan-brackets');
+  brackets.classList.remove('show');
+  void brackets.getBBox();
+  requestAnimationFrame(()=>brackets.classList.add('show'));
+
+  document.getElementById('ar-empty').style.display = 'none';
+  const content = document.getElementById('ar-content');
+  content.classList.remove('show'); void content.offsetWidth; content.classList.add('show');
+  document.getElementById('d-cat').textContent = c.category;
+  document.getElementById('d-title').textContent = c.name;
+  document.getElementById('d-short').textContent = c.short;
+  document.getElementById('d-desc').textContent = c.desc;
+  document.getElementById('d-conn').textContent = c.conn;
+  document.getElementById('d-example').textContent = c.example;
+  document.getElementById('d-level').textContent = c.level;
+}
+
+// ---------------- CONTROLES DE VISTA (3D / rotación) ----------------
+let isFlat = false;
+let rotZ = -14;
+document.getElementById('btn-tilt').addEventListener('click', ()=>{
+  isFlat = !isFlat;
+  const board = document.getElementById('board-3d');
+  document.getElementById('tilt-label').textContent = isFlat ? 'VISTA PLANA' : 'VISTA 3D';
+  if (isFlat){ board.classList.add('flat'); } else { board.classList.remove('flat'); }
+});
+document.getElementById('btn-rotate').addEventListener('click', ()=>{
+  if (isFlat) return;
+  rotZ = rotZ === -14 ? 14 : -14;
+  document.getElementById('board-3d').style.transform = `rotateX(32deg) rotateZ(${rotZ}deg)`;
+});
+
+// ---------------- COORDENADAS EN VIVO (decorativo, sigue el cursor) ----------------
+const scanFrame = document.querySelector('.scan-frame');
+scanFrame.addEventListener('mousemove', (e)=>{
+  const r = scanFrame.getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width * 100).toFixed(2);
+  const y = ((e.clientY - r.top) / r.height * 100).toFixed(2);
+  document.getElementById('coords').textContent = `X: ${x} | Y: ${y}`;
+});
+
+// ---------------- INIT ----------------
+renderComponentsList();
+renderGlossary();
+document.querySelectorAll('.chipx').forEach(g=>{
+  g.addEventListener('click', ()=>selectComponent(g.dataset.key));
+});
+</script>
+
+</body>
+</html>
